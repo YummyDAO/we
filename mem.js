@@ -16,7 +16,8 @@ const JSON_FILE = "pair.json";
 
 //const provider = new ethers.providers.WebSocketProvider('wss://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN');
 //support for websocket you can easily switch from https to wss
-const NODE_URL = "https://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN";
+//const NODE_URL = "https://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN";
+const NODE_URL = "https://rpc-mumbai.maticvigil.com";
 const provider = new ethers.providers.JsonRpcProvider(NODE_URL)
 const account = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 console.log(account)
@@ -165,12 +166,12 @@ async function Checktime(tknin){
     const amountout = ethers.utils.parseEther('0.000001') //since we are trading to weth, to account for all scenerios
     swap(tknin, amountout, amountin);
 
-    timersold = true;
+    //timersold = true;
   }
 
-  console.log(timersold)
+  //console.log(timersold)
 }
-Checktime()
+//Checktime()
 
 async function GetGas() {
   const url = 'https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=6ECTU8BIUKCK1UW63TK76XTBEYSWXMD6YN'
