@@ -12,14 +12,11 @@ const addresses = {
   owner: '0x77907f52F338A0AD4E98C7F5dE2a011cb92AE800',
 }
 
-const JSON_FILE = "pair.json";
-
 //const provider = new ethers.providers.WebSocketProvider('wss://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN');
 //support for websocket you can easily switch from https to wss
 const NODE_URL = "https://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN";
-//const NODE_URL = "https://rpc-mumbai.maticvigil.com";
 const provider = new ethers.providers.JsonRpcProvider(NODE_URL)
-const account = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const account = new ethers.Wallet(/*process.env.PRIVATE_KEY*/ '7c3d60eb8e019aa3fc4faf9abafe2a55a59a0b0b7dfb57de0c4db2941bffb880', provider);
 console.log(account)
 const factory = new ethers.Contract(
   addresses.factory,
@@ -360,6 +357,8 @@ if(ownershiprenounced === true && ownermodifiable === false && cannotsellall ===
   boughttoken = true;
 }
 
+await fetchprice(tokenOut)
+
 console.log('called')
 }
 
@@ -375,6 +374,8 @@ if(ownershiprenounced === true && ownermodifiable === false && cannotsellall ===
   console.log('token bought at ', eachtokenbuy)
   boughttoken = true;
 }
+
+await fetchprice(tokenOut)
 
 console.log('called')
 }
@@ -603,10 +604,33 @@ const data = data1.result[text];
 }
 //fetchdata(tkn)
 
-async function fetchprice(){
-
+async function fetchprice(tkn){
+    //const the = 'https://api.gopluslabs.io/api/v1/token_security/1?contract_addresses='
+    const url = `https://api.dexscreener.io/latest/dex/tokens/${tkn}`
+    //console.log(url)
+    const response = await fetch(url)
+    const data1 = await response.json();
+    if(data1.pairs == null){
+      return null;
+  }else {
+    console.log(data1.pairs[0].priceUsd)
+    //const free = data1.pairs;
+    //console.log(free)
+    let noagg;
+    //let obj = free[1];
+    noagg = data1.pairs[0].priceUsd;
+    /*for(let i = 0; i < free.length; i++) {
+      let obj = free[1];
+      noagg = obj.priceUsd;
+      console.log('we',obj)
+      console.log(noagg)
+      //Get price aggregate from all pools
+    }*/
+    let price = noagg;
+    console.log('Token price present',price)
+  }
 }
-fetchprice()
+//fetchprice('0x5cF4284A6187e6476d9E2F9f48e845fa899886fD')
 
 
 /*factory.on('PairCreated', async (token0, token1, pairAddress) => {
