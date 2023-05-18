@@ -16,7 +16,7 @@ const addresses = {
 //support for websocket you can easily switch from https to wss
 const NODE_URL = "https://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN";
 const provider = new ethers.providers.JsonRpcProvider(NODE_URL)
-const account = new ethers.Wallet(/*process.env.PRIVATE_KEY*/ '7c3d60eb8e019aa3fc4faf9abafe2a55a59a0b0b7dfb57de0c4db2941bffb880', provider);
+const account = new ethers.Wallet(/*process.env.PRIVATE_KEY*/ '', provider);
 console.log(account)
 const factory = new ethers.Contract(
   addresses.factory,
