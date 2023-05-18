@@ -9,15 +9,15 @@ const addresses = {
   factory: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', 
   router: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
   Sniperaddress: '',
-  owner: '',
+  owner: '0x77907f52F338A0AD4E98C7F5dE2a011cb92AE800',
 }
 
 const JSON_FILE = "pair.json";
 
 //const provider = new ethers.providers.WebSocketProvider('wss://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN');
 //support for websocket you can easily switch from https to wss
-//const NODE_URL = "https://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN";
-const NODE_URL = "https://rpc-mumbai.maticvigil.com";
+const NODE_URL = "https://eth.llamarpc.com/rpc/01H04R0B7VA3KVVSQXV30B4ZHN";
+//const NODE_URL = "https://rpc-mumbai.maticvigil.com";
 const provider = new ethers.providers.JsonRpcProvider(NODE_URL)
 const account = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 console.log(account)
@@ -35,13 +35,38 @@ const router = new ethers.Contract(
   account
 );
 
-let ownershiprenounced;
+let ownershiprenounced = false;
 let tax;
 const eachtokenbuy = ethers.utils.parseEther('1'); //for testing purposes we are using one
 let gaslatest;
 let bboughtblock;
+let ownermodifiable;
+let cannotsellall;
+//creator_address
+  //creator_balance
+let creatorpercent;
+let hiddenowner;
+let honeypotwithsamecreator;
+let  isantiwhale;
+let isblacklisted;
+  //is_in_dex
+let ismintable;
+let ishoneypot;
+let isopensource;
+//let checkforlplocked
+let owneraddress
+let transferpausable;
+let tradingcooldown;
+let tokensymbol;
+let tokenname;
+let selltax;
+let buytax;
+let antiwhalemodifiable;
+let boughttoken;
 
-async function checkownership(tkn){
+  const zero = ethers.constants.AddressZero;
+
+/*async function checkownership(tkn){
     const zero = ethers.constants.AddressZero;
     const owner = new ethers.Contract(
         tkn,
@@ -84,7 +109,7 @@ async function checktax(tknin, tknout, amountin , amountout){
     tax = false;
   }
   //Now we check amounts min from getamountminimum then we run callstatic on the several amounts then we compare
-}
+}*/
 
 async function looptokens(token0, token1){
   //get Tokens from json file, check which has the owner value as false and reloop through check ownership;
@@ -101,20 +126,14 @@ async function looptokens(token0, token1){
     let obj = json[i];
     console.log('we',obj)
 
-    //checks
-    if(obj.tax === false){
-      checktax(token0, token1, ethers.utils.parseEther('1') , ethers.utils.parseEther('1'))
-    }
-    if(obj.owner === false){
-      checkownership(token1);
-    }
+    fetchdata(obj.tokenaddress)
 
-    obj.owner = ownershiprenounced;
-    obj.tax = tax;
     const amountout = ethers.utils.parseEther('1');
-    if(obj.owner && obj.tax === true && obj.bought === false){
-      swap(tokenIn, amountout, eachtokenbuy)
-      obj.bought = true;
+
+    if(ownershiprenounced === true && ownermodifiable === false && cannotsellall === false && honeypotwithsamecreator === false && ismintable === false && ishoneypot === false && isopensource === true && buytax === false && selltax === false && transferpausable === false && tradingcooldown === false){
+      //swap(token1, amountout, amountin);
+      console.log('token bought at ', eachtokenbuy)
+      boughttoken = true;
     }
 
     if(obj.bought === true){
@@ -122,7 +141,7 @@ async function looptokens(token0, token1){
       GetTokenBuysCount(token1)
     }
 
-    console.log('we', obj)
+    //console.log('we', obj)
 
     console.log('called loop')
 }
@@ -178,10 +197,10 @@ async function GetGas() {
   const response = await fetch(url);
   const data = await response.json();
 
-  console.log(data);
+  //console.log(data);
   const gas1 = data.result.FastGasPrice;
   gaslatest = ethers.utils.parseUnits(gas1, 'gwei');
-  console.log(gaslatest.toString())
+  //console.log(gaslatest.toString())
   //after every fetch we save to gas latest
   //can also set a min and max range for our gas
   let gaslimit = 21000
@@ -191,9 +210,9 @@ async function GetGas() {
   const round = Math.round(estimatedbase);
   const converttowei = ethers.utils.parseUnits(round.toString(), 'gwei');
   const toether =ethers.utils.formatEther(converttowei.toString())
-  console.log(estimatedbase)
-  console.log(converttowei.toString())
-  console.log(toether)
+  //console.log(estimatedbase)
+  //console.log(converttowei.toString())
+  //console.log(toether)
 }
 
 //GetGas()
@@ -283,60 +302,314 @@ async function swap(tknin, amountout, amountin, token0, token1){
 
   const blockNumber = await provider.getBlockNumber();
   bboughtblock = blockNumber;
+  boughttoken = true;
 }
 
-/*async function testjson(){
-  const fs = require('fs')
+
+//Start of test with data from old blocks
+
+async function testme(){
+const getPoolMintEvents = async (poolId, startBlock, endBlock) => {
+  const mintFilter = factory.filters.PairCreated();
+  console.log("Querying the Pair events...");
+  const mintEvents = await factory.queryFilter(
+    mintFilter,
+    startBlock,
+    endBlock
+  );
+  console.log(
+    `${mintEvents.length} have been emitted by the factory between blocks ${startBlock} & ${endBlock}`
+  );
+  return mintEvents;
+};
+
+const mintEvents = await getPoolMintEvents(
+  "0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8",
+  17278345 - 100,
+  17278345
+);
+console.log(mintEvents);
+
+for(let i = 0; i < mintEvents.length; i++){
+
+console.log(`
+New pair detected
+=================
+token0: ${mintEvents[i].args.token0}
+token1: ${mintEvents[i].args.token1}
+pairAddress: ${mintEvents[i].args.pair}
+`);
+
+let token0 = mintEvents[i].args.token0;
+let token1 = mintEvents[i].args.token1;
+let pairAddress = mintEvents[i].args.pair;
+
+
+GetGas()
+const amountout = ethers.utils.parseEther('1');
+
+//The quote currency needs to be WETH (we will pay with WETH)
+let tokenIn, tokenOut;
+if(token0 === addresses.WETH) {
+tokenIn = token0; 
+tokenOut = token1;
+await fetchdata(tokenOut)
+if(ownershiprenounced === true && ownermodifiable === false && cannotsellall === false && honeypotwithsamecreator === false && ismintable === false && ishoneypot === false && isopensource === true && buytax === false && selltax === false && transferpausable === false && tradingcooldown === false){
+  //swap(token1, amountout, amountin);
+  console.log('token bought at ', eachtokenbuy)
+  boughttoken = true;
+}
+
+console.log('called')
+}
+
+if(token1 == addresses.WETH) {
+tokenIn = token1; 
+tokenOut = token0;
+await fetchdata(tokenOut)
+//add condition checkers
+//call swap
+//swap(token1, amountout, amountin);
+if(ownershiprenounced === true && ownermodifiable === false && cannotsellall === false && honeypotwithsamecreator === false && ismintable === false && ishoneypot === false && isopensource === true && buytax === false && selltax === false && transferpausable === false && tradingcooldown === false){
+  //swap(token1, amountout, amountin);
+  console.log('token bought at ', eachtokenbuy)
+  boughttoken = true;
+}
+
+console.log('called')
+}
+
+//The quote currency is not WETH
+if(typeof tokenIn === 'undefined') {
+return;
+} 
+
+const fs = require('fs')
 
 
 //check if file exist
 if (!fs.existsSync('student.json')) {
-    //create new file if not exist
-    fs.closeSync(fs.openSync('student.json', 'w'));
+  //create new file if not exist
+  fs.closeSync(fs.openSync('student.json', 'w'));
 }
 
 // read file
 const file = fs.readFileSync('student.json')
-const file1 = fs.readFileSync('./student.json', 'utf8');
-
-const newarray = {
-  studentName: 'Joe',
-  address: 'abc'
-}
 const data = {
-    studentName: 'Joe',
-    address: 'us',
-    token0: 'token0',
-    token1: 'token1',
-    pairAddress: 'pairAddress',
-    owner: false,
-    tax: false,
-    count: 0,
-    time: 0,
+token0: token0,
+token1: token1,
+pairAddress: pairAddress,
+tokenaddress: tokenOut,
+ownershiprenounced: ownershiprenounced,
+ownermodifiable: ownermodifiable,
+cannotsellall: cannotsellall,
+creatorpercent: creatorpercent,
+hiddenowner: hiddenowner,
+honeypotwithsamecreator: honeypotwithsamecreator,
+isantiwhale: isantiwhale,
+isblacklisted: isblacklisted,
+ismintable: ismintable,
+ishoneypot: ishoneypot,
+contractverified: isopensource,
+transferpausable: transferpausable,
+tradingcooldown: tradingcooldown,
+tokensymbol: tokensymbol,
+tokenname: tokenname,
+selltax: selltax,
+buytax: buytax,
+antiwhalemodifiable: antiwhalemodifiable,
+bought: boughttoken,
 }
 
 //check if file is empty
 if (file.length == 0) {
-    //add data to json file
-    fs.writeFileSync("student.json", JSON.stringify([data]))
+  fs.writeFileSync("student.json", JSON.stringify([data]))
 } else {
-    //append data to jso file
-    const me = []
-    const json = JSON.parse(file.toString())
-    console.log(file.toString())
-    console.log(json)
-    json.push(data)
-    console.log(json)
-    json[0].studentName = 'we';
-    json[0].owner = true;
-    console.log(JSON.stringify(json))
-    fs.writeFileSync("student.json", JSON.stringify(json))
+  const json = JSON.parse(file.toString())
+  //console.log(file.toString())
+  //console.log(json)
+  json.push(data)
+  //console.log(json)
+  //console.log(JSON.stringify(json))
+  fs.writeFileSync("student.json", JSON.stringify(json))
 }
-}*/
-//testjson()
-//looptokens()
 
-factory.on('PairCreated', async (token0, token1, pairAddress) => {
+//setInterval(looptokens(tokenIn, tokenOut), 7000); 
+}
+}
+
+testme()
+
+
+//Fetch data for our bot to crosscheck
+
+async function fetchdata(tkn){
+  let tkn1 = '0xb2e96a63479C2Edd2FD62b382c89D5CA79f572d3';
+  console.log(tkn)
+  //const the = 'https://api.gopluslabs.io/api/v1/token_security/1?contract_addresses='
+  const url = `https://api.gopluslabs.io/api/v1/token_security/1?contract_addresses=${tkn}`
+  //console.log(url)
+  const response = await fetch(url)
+  const data1 = await response.json();
+  //console.log(data1.result)
+  const data2 = JSON.stringify(data1.result);
+  const data3 = JSON.parse(data2);
+//console.log(data.tkn)
+
+  let text = "";
+for (const x in data3) {
+  text += x;
+}
+console.log(data1.result[text])
+console.log(text)
+
+const data = data1.result[text];
+
+  //can_take_back_ownership
+  const ownermodify = data2.can_take_back_ownership;
+  if(ownermodify == 1){
+    ownermodifiable = true;
+    //add json
+  } else{
+    ownermodifiable = false;
+  }
+  //console.log(ownermodify)
+  //buy_tax
+  const buy_tax = data.buy_tax;
+  if(buy_tax == 1){
+    buytax = true;
+    //add json
+  } else{
+    buytax = false;
+  }
+  //anti_whale_modifiable
+  const anti_whale_modifiable = data.anti_whale_modifiable;
+  if(anti_whale_modifiable == 1){
+    antiwhalemodifiable = true;
+    //add json
+  } else{
+    antiwhalemodifiable = false;
+  }
+  //cannot_sell_all
+  const cannot_sell_all = data.cannot_sell_all;
+  if(cannot_sell_all == 1){
+    cannotsellall = true;
+    //add json
+  } else{
+    cannotsellall = false;
+  }
+  //creator_address
+  //creator_balance
+  //creator_percent
+  const creator_percent = data.creator_percent;
+  creatorpercent = creator_percent;
+  console.log('creator_percent', creator_percent)
+  //hidden_owner
+  const hidden_owner = data.hidden_owner;
+  if(hidden_owner == 1){
+    hiddenowner = true;
+    //add json
+  } else{
+    hiddenowner = false;
+  }
+  //honeypot_with_same_creator
+  const honeypot_with_same_creator = data.honeypot_with_same_creator;
+  if(honeypot_with_same_creator == 1){
+    honeypotwithsamecreator = true;
+    //add json
+  } else{
+    honeypotwithsamecreator = false;
+  }
+  //is_anti_whale
+  const is_anti_whale = data.is_anti_whale;
+  if(is_anti_whale == 1){
+    isantiwhale = true;
+    //add json
+  } else{
+    isantiwhale = false;
+  }
+  //is_blacklisted
+  const is_blacklisted = data.is_blacklisted;
+  if(is_blacklisted == 1){
+    isblacklisted = true;
+    //add json
+  } else{
+    isblacklisted = false;
+  }
+  //is_in_dex
+  //is_mintable
+  const is_mintable = data.is_mintable;
+  if(is_mintable == 1){
+    ismintable = true;
+    //add json
+  } else{
+    ismintable = false;
+  }
+  //is_honeypot
+  const is_honeypot = data.is_honeypot;
+  if(is_honeypot == 1){
+    ishoneypot = true;
+    //add json
+  } else{
+    ishoneypot = false;
+  }
+  //is_open_source
+  const is_open_source = data.is_open_source;
+  if(is_open_source == 1){
+    isopensource = true;
+    //add json
+  } else{
+    isopensource = false;
+  }
+  //checkforlplocked
+  //owner_address
+  const owner_address = data.owner_address;
+  if(owner_address == zero){
+    ownershiprenounced = true;
+    //add json
+  } else{
+    ownershiprenounced = false;
+  }
+  //transfer_pausable
+  const transfer_pausable = data.transfer_pausable;
+  if(transfer_pausable == 1){
+    transferpausable = true;
+    //add json
+  } else{
+    transferpausable = false;
+  }
+  //trading_cooldown
+  const trading_cooldown = data.trading_cooldown;
+  if(trading_cooldown == 1){
+    tradingcooldown = true;
+    //add json
+  } else{
+    tradingcooldown = false;
+  }
+  //token_symbol
+  tokensymbol = data.token_symbol;
+  //token_name
+  tokenname = data.token_name;
+  //sell_tax
+  const sell_tax = data.sell_tax;
+  if(sell_tax == 1){
+    selltax = true;
+    //add json
+  } else{
+    selltax = false;
+  }
+  console.log(selltax)
+  //console.log(data)*/
+}
+//fetchdata(tkn)
+
+async function fetchprice(){
+
+}
+fetchprice()
+
+
+/*factory.on('PairCreated', async (token0, token1, pairAddress) => {
   console.log(`
     New pair detected
     =================
@@ -346,50 +619,39 @@ factory.on('PairCreated', async (token0, token1, pairAddress) => {
   `);
 
   GetGas()
+  const amountout = ethers.utils.parseEther('1');
 
   //The quote currency needs to be WETH (we will pay with WETH)
   let tokenIn, tokenOut;
   if(token0 === addresses.WETH) {
     tokenIn = token0; 
     tokenOut = token1;
-
-    //checktax(token0, token1, ethers.utils.parseEther('1') , ethers.utils.parseEther('1'))
-    //for amount in for check tax we would use a default value of 1 eth
-
-    //checkownership(token1);
-
-    const amountout = ethers.utils.parseEther('1');
-    //swap(tokenIn, amountout, eachtokenbuy)
-    //Checktime(token1)
-
-    //GetTokenBuysCount(tokenOut)
-    //looptokens()
+    fetchdata(token1)
+    if(ownershiprenounced === true && ownermodifiable === false && cannotsellall === false && honeypotwithsamecreator === false && ismintable === false && ishoneypot === false && isopensource === true && buytax === false && selltax === false && transferpausable === false && tradingcooldown === false){
+      //swap(token1, amountout, amountin);
+      console.log('token bought at ', eachtokenbuy)
+      boughttoken = true;
+    }
   }
 
   if(token1 == addresses.WETH) {
     tokenIn = token1; 
     tokenOut = token0;
-    //checkownership(token0)
-    //checktax(token1, token0, ethers.utils.parseEther('1') , ethers.utils.parseEther('1'))
-    //swap(tokenIn, amountout, eachtokenbuy)
-    //Checktime(token0)
-    //GetTokenBuysCount(tokenOut)
-    //looptokens()
+    fetchdata(token0)
+    //add condition checkers
+    //call swap
+    //swap(token1, amountout, amountin);
+    if(ownershiprenounced === true && ownermodifiable === false && cannotsellall === false && honeypotwithsamecreator === false && ismintable === false && ishoneypot === false && isopensource === true && buytax === false && selltax === false && transferpausable === false && tradingcooldown === false){
+      //swap(token1, amountout, amountin);
+      console.log('token bought at ', eachtokenbuy)
+      boughttoken = true;
+    }
   }
 
   //The quote currency is not WETH
   if(typeof tokenIn === 'undefined') {
     return;
   } 
-
- //check ownership renounced
-  if(ownershiprenounced === false){
-    return;
-  }
-
-  if(tax === false){
-    return;
-  }
 
   const fs = require('fs')
 
@@ -403,12 +665,29 @@ factory.on('PairCreated', async (token0, token1, pairAddress) => {
   // read file
   const file = fs.readFileSync('student.json')
   const data = {
-    token0: token0,
-    token1: token1,
-    pairAddress: pairAddress,
-    owner: false,
-    tax: false,
-    bought: true
+    token0: 'token0',
+    token1: 'token1',
+    pairAddress: 'pairAddress',
+    tokenaddress: tokenOut,
+    ownershiprenounced: ownershiprenounced,
+    ownermodifiable: ownermodifiable,
+    cannotsellall: cannotsellall,
+    creatorpercent: creatorpercent,
+    hiddenowner: hiddenowner,
+    honeypotwithsamecreator: honeypotwithsamecreator,
+    isantiwhale: isantiwhale,
+    isblacklisted: isblacklisted,
+    ismintable: ismintable,
+    ishoneypot: ishoneypot,
+    contractverified: isopen_source,
+    transferpausable: transferpausable,
+    tradingcooldown: tradingcooldown,
+    tokensymbol: tokensymbol,
+    tokenname: tokenname,
+    selltax: selltax,
+    buytax: buytax,
+    antiwhalemodifiable: antiwhalemodifiable,
+    bought: boughttoken,
   }
   
   //check if file is empty
@@ -426,7 +705,7 @@ factory.on('PairCreated', async (token0, token1, pairAddress) => {
 
   setInterval(looptokens(tokenIn, tokenOut), 7000); 
 
-});
+});*/
   //write to json before calling return
 
   //check ownwership*
@@ -454,6 +733,8 @@ factory.on('PairCreated', async (token0, token1, pairAddress) => {
  //boolean value for ownership
  //field for tax
  //field for count
+ //token name
+ //opensource
  
  //so if we looping through then we check those with fields owner === false;
 
@@ -473,3 +754,6 @@ factory.on('PairCreated', async (token0, token1, pairAddress) => {
 //Must be transferable
 //Get token info: https://api.etherscan.io/api?module=token&action=tokeninfo&contractaddress=0x0e3a2a1f2146d86a604adc220b4967a898d7fe07&apikey=YourApiKeyToke
 //add erc20 and eth transfer to SC
+//for each check timer or counter get price and our live balance 
+//code to pause swapping of tokens on smart contract
+//don't forget buy json element
